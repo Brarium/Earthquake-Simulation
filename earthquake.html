@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Earthquake Simulation</title>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css" rel="stylesheet" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header, main, footer {
+      width: 100%;
+      max-width: 1200px;
+      padding: 10px;
+    }
+    #map {
+      width: 100%;
+      height: 60vh;
+      margin-top: 20px;
+      position: relative;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    .controls label, .controls input, .controls button {
+      margin: 5px 0;
+    }
+    .significant-earthquakes {
+      width: 100%;
+      max-height: 300px;
+      overflow-y: auto;
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .significant-earthquakes h3 {
+      margin-top: 0;
+    }
+    .significant-earthquakes table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .significant-earthquakes th, .significant-earthquakes td {
+      border: 1px solid #ccc;
+      padding: 5px;
+      text-align: left;
+    }
+    .significant-earthquakes th {
+      background-color: #f2f2f2;
+    }
+    .significant-earthquakes td a {
+      color: blue;
+      text-decoration: none;
+    }
+    .significant-earthquakes td a:hover {
+      text-decoration: underline;
+    }
+    .significant-earthquakes td {
+      cursor: pointer;
+    }
+    #loading-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 10px;
+      background-color: rgba(255, 255, 255, 0.9);
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      display: none;
+      z-index: 10;
+    }
+    @media (max-width: 768px) {
+      #map {
+        height: 50vh;
+      }
+      .significant-earthquakes {
+        max-height: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Earthquake Simulation</h1>
+  </header>
+  <main>
+    <div class="controls">
+      <label for="start-date">Start Date:</label>
+      <input type="date" id="start-date">
+      <label for="end-date">End Date:</label>
+      <input type="date" id="end-date">
+      <button id="simulate-btn">Simulate</button>
+    </div>
+    <div id="map"></div>
+    <div class="controls">
+      <label for="time-slider">Time:</label>
+      <input type="range" id="time-slider" min="0" max="100" value="0">
+      <label for="playback-speed">Speed:</label>
+      <input type="number" id="playback-speed" value="100" min="10" step="10"> ms
+      <button id="play-pause-btn">Pause</button>
+    </div>
+    <div class="info" id="earthquake-info">
+      <h3>Earthquake Details</h3>
+      <p id="earthquake-details">Select a date range and simulate to see earthquake details.</p>
+    </div>
+    <div class="significant-earthquakes">
+      <h3>Significant Earthquakes</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Magnitude</th>
+            <th>Epicenter</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="significant-list"></tbody>
+      </table>
+    </div>
+    <div id="loading-indicator">Loading...</div>
+  </main>
+  <footer>
+    <p>&copy; 2024 Earthquake Simulation</p>
+  </footer>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js"></script>
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoibWluY2hvbWFjaG8iLCJhIjoiY2x3aDY2eGFpMDYzMzJrbXBzcmpoZnc3MCJ9.V5YaMHi7CRVuB6wOvfZVNA';
+    var map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v11',
+      center: [138.2529, 36.2048],
+      zoom: 5
+    });
+
+    var earthquakeData = [];
+    var currentStep = 0;
+    var totalSteps = 100;
+    var isPlaying = false;
+    var playInterval;
+
+    document.getElementById('simulate-btn').addEventListener('click', function() {
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+
+      if (startDate && endDate) {
+        const apiUrl = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${startDate}&endtime=${endDate}&minlatitude=24&maxlatitude=46&minlongitude=122&maxlongitude=146`;
+        console.log('Fetching data from URL:', apiUrl);
+
+        document.getElementById('loading-indicator').style.display = 'block';
+
+        fetch(apiUrl)
+          .then(response => response.json())
+          .then(data => {
+            console.log('Received data:', data);
+            earthquakeData = data.features;
+            earthquakeData.sort((a, b) => new Date(a.properties.time) - new Date(b.properties.time)); // Sort by date
+            currentStep = 0;
+            document.getElementById('time-slider').value = 0;
+            document.getElementById('time-slider').max = earthquakeData.length - 1;
+            updateMap();
+            updateSignificantList();
+            startPlayback();
+          })
+          .catch(error => console.error('Error fetching earthquake data:', error))
+          .finally(() => {
+            document.getElementById('loading-indicator').style.display = 'none';
+          });
+      } else {
+        alert('Please select both start and end dates.');
+      }
+    });
+
+    document.getElementById('time-slider').addEventListener('input', function() {
+      currentStep = parseInt(this.value);
+      requestAnimationFrame(updateMap);
+    });
+
+    document.getElementById('play-pause-btn').addEventListener('click', function() {
+      if (isPlaying) {
+        pausePlayback();
+      } else {
+        startPlayback();
+      }
+    });
+
+    function updateMap() {
+      const layers = map.getStyle().layers;
+      if (layers) {
+        layers.forEach(layer => {
+          if (layer.id.startsWith('circle-')) {
+            fadeOutLayer(layer.id, layer.magnitude);
+          }
+        });
+      }
+
+      if (earthquakeData.length === 0) return;
+
+      let startIndex = Math.max(0, currentStep - 100);
+      let stepData = earthquakeData.slice(startIndex, currentStep + 1);
+
+      stepData.forEach(earthquake => {
+        const coords = earthquake.geometry.coordinates;
+        const magnitude = earthquake.properties.mag;
+        const color = getColor(magnitude);
+        const circleRadius = getCircleRadius(magnitude);
+
+        const id = `circle-${coords[0]}-${coords[1]}-${new Date(earthquake.properties.time).getTime()}`;
+        map.addLayer({
+          id: id,
+          type: 'circle',
+          source: {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: [coords[0], coords[1]]
+              }
+            }
+          },
+          paint: {
+            'circle-radius': circleRadius,
+            'circle-color': color,
+            'circle-opacity': 0
+          }
+        });
+
+        fadeInLayer(id);
+
+        const popup = new mapboxgl.Popup({ offset: 25 })
+          .setHTML(`<h4>${earthquake.properties.place}</h4><p>Magnitude: ${magnitude}</p><p>${new Date(earthquake.properties.time).toLocaleString()}</p>`);
+        map.on('click', id, () => {
+          popup.setLngLat([coords[0], coords[1]])
+            .addTo(map);
+        });
+      });
+
+      updateEarthquakeDetails(stepData);
+    }
+
+    function fadeOutLayer(layerId, magnitude) {
+      let opacity = 0.6;
+      const duration = getFadeOutDuration(magnitude);
+      const interval = setInterval(() => {
+        opacity -= 0.1;
+        if (opacity <= 0) {
+          clearInterval(interval);
+          if (map.getLayer(layerId)) {
+            map.removeLayer(layerId);
+            map.removeSource(layerId);
+          }
+        } else {
+          map.setPaintProperty(layerId, 'circle-opacity', opacity);
+        }
+      }, duration / 6);
+    }
+
+    function getFadeOutDuration(magnitude) {
+      if (magnitude >= 7) return 2000;
+      if (magnitude >= 6) return 1500;
+      if (magnitude >= 5) return 1000;
+      return 500;
+    }
+
+    function fadeInLayer(layerId) {
+      let opacity = 0;
+      const interval = setInterval(() => {
+        opacity += 0.1;
+        if (opacity >= 0.6) {
+          clearInterval(interval);
+        }
+        map.setPaintProperty(layerId, 'circle-opacity', opacity);
+      }, 100);
+    }
+
+    function getColor(magnitude) {
+      if (magnitude >= 7) return '#d73027';
+      if (magnitude >= 6) return '#fc8d59';
+      if (magnitude >= 5) return '#fee08b';
+      if (magnitude >= 4) return '#d9ef8b';
+      return '#91cf60';
+    }
+
+    function getCircleRadius(magnitude) {
+      return magnitude * 5;
+    }
+
+    function updateEarthquakeDetails(stepData) {
+      if (stepData.length === 0) {
+        document.getElementById('earthquake-details').innerHTML = 'No earthquake data available for the selected date range.';
+        return;
+      }
+
+      const latestEarthquake = stepData[stepData.length - 1];
+      const place = latestEarthquake.properties.place;
+      const magnitude = latestEarthquake.properties.mag;
+      const time = new Date(latestEarthquake.properties.time).toLocaleString();
+      document.getElementById('earthquake-details').innerHTML = `
+        <strong>Location:</strong> ${place} <br>
+        <strong>Magnitude:</strong> ${magnitude} <br>
+        <strong>Time:</strong> ${time} <br>
+        ${latestEarthquake.properties.title}
+      `;
+    }
+
+    function updateSignificantList() {
+      const list = document.getElementById('significant-list');
+      list.innerHTML = '';
+
+      earthquakeData.forEach((earthquake, index) => {
+        const magnitude = earthquake.properties.mag;
+        if (magnitude >= 7) {
+          const place = earthquake.properties.place;
+          const time = new Date(earthquake.properties.time).toLocaleString();
+          const newsUrl = `https://www.google.com/search?q=${encodeURIComponent(place + ' earthquake ' + magnitude)}`;
+          const listItem = document.createElement('tr');
+          listItem.innerHTML = `
+            <td>${magnitude}</td>
+            <td class="epicenter" data-index="${index}">${place}</td>
+            <td><a href="${newsUrl}" target="_blank">${time}</a></td>
+          `;
+          listItem.querySelector('.epicenter').addEventListener('click', () => {
+            moveToEarthquake(index);
+          });
+          list.appendChild(listItem);
+        }
+      });
+    }
+
+    function moveToEarthquake(index) {
+      currentStep = index;
+      document.getElementById('time-slider').value = currentStep;
+      updateMap();
+      const earthquake = earthquakeData[index];
+      zoomToLocation(earthquake);
+      updateEarthquakeDetails([earthquake]);
+    }
+
+    function zoomToLocation(earthquake) {
+      const coords = earthquake.geometry.coordinates;
+      map.flyTo({
+        center: [coords[0], coords[1]],
+        zoom: 10,
+        essential: true
+      });
+    }
+
+    function startPlayback() {
+      isPlaying = true;
+      document.getElementById('play-pause-btn').innerText = 'Pause';
+      const speed = parseInt(document.getElementById('playback-speed').value, 10) || 100;
+      playInterval = setInterval(() => {
+        if (currentStep < earthquakeData.length - 1) {
+          currentStep++;
+          document.getElementById('time-slider').value = currentStep;
+          requestAnimationFrame(updateMap);
+        } else {
+          pausePlayback();
+        }
+      }, speed);
+    }
+
+    function pausePlayback() {
+      isPlaying = false;
+      document.getElementById('play-pause-btn').innerText = 'Play';
+      clearInterval(playInterval);
+    }
+  </script>
+</body>
+</html>
