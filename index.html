@@ -21,8 +21,8 @@
       <input type="number" id="min-magnitude" value="4" min="0" step="0.1" aria-label="Min Magnitude">
       <label for="max-magnitude" data-i18n="max-magnitude-label">Max Magnitude:</label>
       <input type="number" id="max-magnitude" value="10" min="0" step="0.1" aria-label="Max Magnitude">
-      <button id="simulate-btn" data-i18n="simulate-btn">Simulate</button>
-      <button id="show-hotspots-btn" data-i18n="show-hotspots-btn">Show Hotspots</button>
+      <button id="simulate-btn" class="btn" data-i18n="simulate-btn">Simulate</button>
+      <button id="show-hotspots-btn" class="btn" data-i18n="show-hotspots-btn">Show Hotspots</button>
     </div>
     <div id="map"></div>
     <div class="controls">
@@ -30,9 +30,9 @@
       <input type="range" id="time-slider" min="0" max="100" value="0" aria-label="Time Slider">
       <label for="playback-speed" data-i18n="playback-speed-label">Speed:</label>
       <input type="number" id="playback-speed" value="100" min="10" step="10" aria-label="Playback Speed"> ms
-      <button id="play-pause-btn" data-i18n="play-pause-btn">Pause</button>
-      <button id="save-settings-btn" data-i18n="save-settings-btn">Save Settings</button>
-      <button id="export-results-btn" data-i18n="export-results-btn">Export Results</button>
+      <button id="play-pause-btn" class="btn" data-i18n="play-pause-btn">Pause</button>
+      <button id="save-settings-btn" class="btn" data-i18n="save-settings-btn">Save Settings</button>
+      <button id="export-results-btn" class="btn" data-i18n="export-results-btn">Export Results</button>
     </div>
     <div class="info" id="earthquake-info">
       <h3 data-i18n="earthquake-details-title">Earthquake Details</h3>
@@ -57,7 +57,7 @@
       <form>
         <label for="feedback" data-i18n="feedback-label">Your Feedback:</label><br>
         <textarea id="feedback" rows="4" cols="50"></textarea><br>
-        <button type="button" id="submit-feedback" data-i18n="submit-feedback">Submit</button>
+        <button type="button" id="submit-feedback" class="btn" data-i18n="submit-feedback">Submit</button>
       </form>
     </div>
   </main>
