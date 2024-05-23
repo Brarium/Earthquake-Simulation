@@ -5,7 +5,13 @@ i18next
   .init({
     fallbackLng: 'en',
     backend: {
-      loadPath: '/earthquake-simulation/locales/{{lng}}/translation.json'
+      loadPath: '/earthquake-simulation/locales/{{lng}}/translation.json', // GitHub Pages에서 호스팅되는 경로에 맞게 수정
+      crossDomain: true,
+      requestOptions: {
+        mode: 'cors',
+        credentials: 'same-origin',
+        cache: 'default'
+      }
     }
   }, function(err, t) {
     updateContent();
@@ -23,7 +29,7 @@ document.getElementById('language-select').addEventListener('change', function()
   i18next.changeLanguage(selectedLanguage, updateContent);
 });
 
-mapboxgl.accessToken = 'pk.eyJ1IjoibWluY2hvbWFjaG8iLCJhIjoiY2x3aDY2eGFpMDYzMzJrbXBzcmpoZnc3MCJ9.V5YaMHi7CRVuB6wOvfZVNA';
+mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
 var map = new mapboxgl.Map({
   container: 'map',
   style: 'mapbox://styles/mapbox/streets-v11',
