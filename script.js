@@ -42,7 +42,7 @@ let currentStep = 0;
 let totalSteps = 100;
 let isPlaying = false;
 let playInterval;
-let showHotspots = true;
+let showHotspots = false;
 
 document.getElementById('simulate-btn').addEventListener('click', simulateEarthquakes);
 document.getElementById('toggle-hotspots-btn').addEventListener('click', toggleHotspots);
@@ -135,7 +135,7 @@ function updateMap() {
   const layers = map.getStyle().layers;
   if (layers) {
     layers.forEach(layer => {
-      if (layer.id.startsWith('circle-') || layer.id.startsWith('hotspot-')) {
+      if (layer.id.startsWith('circle-') || layer.id.startsWith('hotspot-') || layer.id.startsWith('shockwave-')) {
         map.removeLayer(layer.id);
         map.removeSource(layer.id);
       }
@@ -174,11 +174,9 @@ function updateMap() {
       paint: {
         'circle-radius': circleRadius,
         'circle-color': color,
-        'circle-opacity': 0
+        'circle-opacity': 0.6
       }
     });
-
-    fadeInLayer(id);
 
     const popup = new mapboxgl.Popup({ offset: 25 })
       .setHTML(`<h4>${earthquake.properties.place}</h4><p>Magnitude: ${magnitude}</p><p>${new Date(earthquake.properties.time).toLocaleString()}</p>`);
@@ -219,21 +217,6 @@ function getFadeOutDuration(magnitude) {
   if (magnitude >= 6) return 1500;
   if (magnitude >= 5) return 1000;
   return 500;
-}
-
-function fadeInLayer(layerId) {
-  let opacity = 0;
-  const interval = setInterval(() => {
-    if (map.getLayer(layerId)) {
-      opacity += 0.1;
-      if (opacity >= 0.6) {
-        clearInterval(interval);
-      }
-      map.setPaintProperty(layerId, 'circle-opacity', opacity);
-    } else {
-      clearInterval(interval);
-    }
-  }, 100);
 }
 
 function getColor(magnitude) {
@@ -367,8 +350,8 @@ function drawHotspots() {
       }
     });
 
-    const hotspotLayer = {
-      id: `heat-${coords[0]}-${coords[1]}`,
+    const shockwaveLayer = {
+      id: `shockwave-${coords[0]}-${coords[1]}`,
       type: 'heatmap',
       source: {
         type: 'geojson',
@@ -422,7 +405,7 @@ function drawHotspots() {
       }
     };
 
-    map.addLayer(hotspotLayer);
+    map.addLayer(shockwaveLayer);
   });
 }
 
@@ -430,7 +413,7 @@ function clearHotspots() {
   const layers = map.getStyle().layers;
   if (layers) {
     layers.forEach(layer => {
-      if (layer.id.startsWith('hotspot-') || layer.id.startsWith('heat-')) {
+      if (layer.id.startsWith('hotspot-') || layer.id.startsWith('shockwave-')) {
         map.removeLayer(layer.id);
         map.removeSource(layer.id);
       }
