@@ -30,20 +30,28 @@ document.getElementById('language-select').addEventListener('change', function()
 });
 
 mapboxgl.accessToken = 'pk.eyJ1IjoibWluY2hvbWFjaG8iLCJhIjoiY2x3aDY2eGFpMDYzMzJrbXBzcmpoZnc3MCJ9.V5YaMHi7CRVuB6wOvfZVNA';
-var map = new mapboxgl.Map({
+const map = new mapboxgl.Map({
   container: 'map',
   style: 'mapbox://styles/mapbox/streets-v11',
   center: [138.2529, 36.2048],
   zoom: 5
 });
 
-var earthquakeData = [];
-var currentStep = 0;
-var totalSteps = 100;
-var isPlaying = false;
-var playInterval;
+let earthquakeData = [];
+let currentStep = 0;
+let totalSteps = 100;
+let isPlaying = false;
+let playInterval;
 
-document.getElementById('simulate-btn').addEventListener('click', function() {
+document.getElementById('simulate-btn').addEventListener('click', simulateEarthquakes);
+document.getElementById('show-hotspots-btn').addEventListener('click', showHotspots);
+document.getElementById('time-slider').addEventListener('input', handleTimeSlider);
+document.getElementById('play-pause-btn').addEventListener('click', togglePlayback);
+document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
+document.getElementById('export-results-btn').addEventListener('click', exportResults);
+document.getElementById('submit-feedback').addEventListener('click', submitFeedback);
+
+function simulateEarthquakes() {
   const startDate = document.getElementById('start-date').value;
   const endDate = document.getElementById('end-date').value;
   const minMagnitude = parseFloat(document.getElementById('min-magnitude').value);
@@ -75,26 +83,22 @@ document.getElementById('simulate-btn').addEventListener('click', function() {
   } else {
     alert('Please select valid dates and magnitude range.');
   }
-});
+}
 
-document.getElementById('show-hotspots-btn').addEventListener('click', function() {
-  showHotspots();
-});
-
-document.getElementById('time-slider').addEventListener('input', function() {
+function handleTimeSlider() {
   currentStep = parseInt(this.value);
   requestAnimationFrame(updateMap);
-});
+}
 
-document.getElementById('play-pause-btn').addEventListener('click', function() {
+function togglePlayback() {
   if (isPlaying) {
     pausePlayback();
   } else {
     startPlayback();
   }
-});
+}
 
-document.getElementById('save-settings-btn').addEventListener('click', function() {
+function saveSettings() {
   const settings = {
     startDate: document.getElementById('start-date').value,
     endDate: document.getElementById('end-date').value,
@@ -104,9 +108,9 @@ document.getElementById('save-settings-btn').addEventListener('click', function(
   };
   localStorage.setItem('earthquakeSimSettings', JSON.stringify(settings));
   alert('Settings saved!');
-});
+}
 
-document.getElementById('export-results-btn').addEventListener('click', function() {
+function exportResults() {
   const results = earthquakeData.map(earthquake => ({
     magnitude: earthquake.properties.mag,
     place: earthquake.properties.place,
@@ -114,9 +118,9 @@ document.getElementById('export-results-btn').addEventListener('click', function
   }));
   const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
   saveAs(blob, 'earthquake_results.json');
-});
+}
 
-document.getElementById('submit-feedback').addEventListener('click', function() {
+function submitFeedback() {
   const feedback = document.getElementById('feedback').value;
   if (feedback) {
     alert('Thank you for your feedback!');
@@ -124,7 +128,7 @@ document.getElementById('submit-feedback').addEventListener('click', function() 
   } else {
     alert('Please enter your feedback.');
   }
-});
+}
 
 function updateMap() {
   const layers = map.getStyle().layers;
@@ -139,8 +143,8 @@ function updateMap() {
 
   if (earthquakeData.length === 0) return;
 
-  let startIndex = Math.max(0, currentStep - 100);
-  let stepData = earthquakeData.slice(startIndex, currentStep + 1);
+  const startIndex = Math.max(0, currentStep - 100);
+  const stepData = earthquakeData.slice(startIndex, currentStep + 1);
 
   stepData.forEach(earthquake => {
     const coords = earthquake.geometry.coordinates;
