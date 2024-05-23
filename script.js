@@ -5,7 +5,7 @@ i18next
   .init({
     fallbackLng: 'en',
     backend: {
-      loadPath: '/earthquake-simulation/locales/{{lng}}/translation.json',
+      loadPath: '/Earthquake-Simulation/locales/{{lng}}/translation.json',
       crossDomain: true,
       requestOptions: {
         mode: 'cors',
