@@ -42,9 +42,10 @@ let currentStep = 0;
 let totalSteps = 100;
 let isPlaying = false;
 let playInterval;
+let showHotspots = true;
 
 document.getElementById('simulate-btn').addEventListener('click', simulateEarthquakes);
-document.getElementById('show-hotspots-btn').addEventListener('click', showHotspots);
+document.getElementById('toggle-hotspots-btn').addEventListener('click', toggleHotspots);
 document.getElementById('time-slider').addEventListener('input', handleTimeSlider);
 document.getElementById('play-pause-btn').addEventListener('click', togglePlayback);
 document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
@@ -134,7 +135,7 @@ function updateMap() {
   const layers = map.getStyle().layers;
   if (layers) {
     layers.forEach(layer => {
-      if (layer.id.startsWith('circle-')) {
+      if (layer.id.startsWith('circle-') || layer.id.startsWith('hotspot-')) {
         map.removeLayer(layer.id);
         map.removeSource(layer.id);
       }
@@ -188,6 +189,10 @@ function updateMap() {
   });
 
   updateEarthquakeDetails(stepData);
+
+  if (showHotspots) {
+    drawHotspots();
+  }
 }
 
 function fadeOutLayer(layerId, magnitude) {
@@ -232,10 +237,11 @@ function fadeInLayer(layerId) {
 }
 
 function getColor(magnitude) {
+  if (magnitude >= 9) return '#000000';
   if (magnitude >= 7) return '#d73027';
   if (magnitude >= 6) return '#fc8d59';
   if (magnitude >= 5) return '#fee08b';
-  if (magnitude >= 4) return '#d9ef8b';
+  if (magnitude < 5) return '#d9d9d9'; // Color for magnitudes below 5
   return '#91cf60';
 }
 
@@ -306,7 +312,7 @@ function zoomToLocation(earthquake) {
 function startPlayback() {
   isPlaying = true;
   document.getElementById('play-pause-btn').innerText = i18next.t('pause');
-  const speed = parseInt(document.getElementById('playback-speed').value, 10) || 100;
+  const speed = parseInt(document.getElementById('playback-speed').value, 10) || 1000;
   playInterval = setInterval(() => {
     if (currentStep < earthquakeData.length - 1) {
       currentStep++;
@@ -324,41 +330,23 @@ function pausePlayback() {
   clearInterval(playInterval);
 }
 
-function showHotspots() {
-  // Clear existing markers
-  const layers = map.getStyle().layers;
-  if (layers) {
-    layers.forEach(layer => {
-      if (layer.id.startsWith('hotspot-') || layer.id.startsWith('line-')) {
-        map.removeLayer(layer.id);
-        map.removeSource(layer.id);
-      }
-    });
+function toggleHotspots() {
+  showHotspots = !showHotspots;
+  if (showHotspots) {
+    drawHotspots();
+  } else {
+    clearHotspots();
   }
+}
 
-  // Add hotspots
-  const hotspots = calculateHotspots(earthquakeData);
+function drawHotspots() {
+  const maxMagnitudeEarthquake = earthquakeData.reduce((max, earthquake) => earthquake.properties.mag > max.properties.mag ? earthquake : max, earthquakeData[0]);
+  const mainCoords = maxMagnitudeEarthquake.geometry.coordinates;
 
-  // Draw lines between hotspots
-  const lineData = {
-    type: 'FeatureCollection',
-    features: []
-  };
-  for (let i = 0; i < hotspots.length - 1; i++) {
-    lineData.features.push({
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [hotspots[i].coordinates[0], hotspots[i].coordinates[1]],
-          [hotspots[i + 1].coordinates[0], hotspots[i + 1].coordinates[1]]
-        ]
-      }
-    });
-  }
+  earthquakeData.forEach(earthquake => {
+    const coords = earthquake.geometry.coordinates;
+    const id = `hotspot-${coords[0]}-${coords[1]}`;
 
-  hotspots.forEach((hotspot, index) => {
-    const id = `hotspot-${index}`;
     map.addLayer({
       id: id,
       type: 'circle',
@@ -368,50 +356,84 @@ function showHotspots() {
           type: 'Feature',
           geometry: {
             type: 'Point',
-            coordinates: hotspot.coordinates
+            coordinates: [coords[0], coords[1]]
           }
         }
       },
       paint: {
-        'circle-radius': 10,
-        'circle-color': '#ff0000',
-        'circle-opacity': 0.8
+        'circle-radius': 3,
+        'circle-color': '#000000',
+        'circle-opacity': 1
       }
     });
-  });
 
-  map.addLayer({
-    id: 'hotspot-lines',
-    type: 'line',
-    source: {
-      type: 'geojson',
-      data: lineData
-    },
-    paint: {
-      'line-color': '#ff0000',
-      'line-width': 2
-    }
+    const hotspotLayer = {
+      id: `heat-${coords[0]}-${coords[1]}`,
+      type: 'heatmap',
+      source: {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [coords[0], coords[1]]
+          }
+        }
+      },
+      paint: {
+        'heatmap-weight': {
+          property: 'mag',
+          type: 'exponential',
+          stops: [
+            [0, 0],
+            [6, 1]
+          ]
+        },
+        'heatmap-intensity': {
+          stops: [
+            [0, 0],
+            [5, 1.2]
+          ]
+        },
+        'heatmap-color': [
+          'interpolate',
+          ['linear'],
+          ['heatmap-density'],
+          0, 'rgba(33,102,172,0)',
+          0.2, 'rgba(103,169,207,0.6)',
+          0.4, 'rgba(209,229,240,0.8)',
+          0.6, 'rgba(253,219,199,0.9)',
+          0.8, 'rgba(239,138,98,0.9)',
+          1, 'rgba(178,24,43,0.9)'
+        ],
+        'heatmap-radius': {
+          stops: [
+            [0, 2],
+            [5, 15]
+          ]
+        },
+        'heatmap-opacity': {
+          default: 1,
+          stops: [
+            [14, 1],
+            [15, 0]
+          ]
+        },
+      }
+    };
+
+    map.addLayer(hotspotLayer);
   });
 }
 
-function calculateHotspots(earthquakeData) {
-  const hotspots = {};
-  earthquakeData.forEach(earthquake => {
-    const coords = earthquake.geometry.coordinates;
-    const magnitude = earthquake.properties.mag;
-    const key = `${coords[0].toFixed(2)},${coords[1].toFixed(2)}`;
-
-    if (!hotspots[key]) {
-      hotspots[key] = {
-        coordinates: coords,
-        magnitude: magnitude,
-        count: 1
-      };
-    } else {
-      hotspots[key].magnitude = (hotspots[key].magnitude * hotspots[key].count + magnitude) / (hotspots[key].count + 1);
-      hotspots[key].count += 1;
-    }
-  });
-
-  return Object.values(hotspots);
+function clearHotspots() {
+  const layers = map.getStyle().layers;
+  if (layers) {
+    layers.forEach(layer => {
+      if (layer.id.startsWith('hotspot-') || layer.id.startsWith('heat-')) {
+        map.removeLayer(layer.id);
+        map.removeSource(layer.id);
+      }
+    });
+  }
 }
