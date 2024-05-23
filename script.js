@@ -5,7 +5,7 @@ i18next
   .init({
     fallbackLng: 'en',
     backend: {
-      loadPath: '/locales/{{lng}}/translation.json'
+      loadPath: '/earthquake-simulation/locales/{{lng}}/translation.json'
     }
   }, function(err, t) {
     updateContent();
