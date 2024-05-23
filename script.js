@@ -43,10 +43,11 @@ let totalSteps = 100;
 let isPlaying = false;
 let playInterval;
 let showHotspots = false;
+let debounceTimeout;
 
 document.getElementById('simulate-btn').addEventListener('click', simulateEarthquakes);
 document.getElementById('toggle-hotspots-btn').addEventListener('click', toggleHotspots);
-document.getElementById('time-slider').addEventListener('input', handleTimeSlider);
+document.getElementById('time-slider').addEventListener('input', debounce(handleTimeSlider, 200));
 document.getElementById('play-pause-btn').addEventListener('click', togglePlayback);
 document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
 document.getElementById('export-results-btn').addEventListener('click', exportResults);
@@ -419,4 +420,11 @@ function clearHotspots() {
       }
     });
   }
+}
+
+function debounce(func, wait) {
+  return function() {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => func.apply(this, arguments), wait);
+  };
 }
