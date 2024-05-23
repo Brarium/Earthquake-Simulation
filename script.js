@@ -5,7 +5,7 @@ i18next
   .init({
     fallbackLng: 'en',
     backend: {
-      loadPath: '/earthquake-simulation/locales/{{lng}}/translation.json', // GitHub Pages에서 호스팅되는 경로에 맞게 수정
+      loadPath: '/earthquake-simulation/locales/{{lng}}/translation.json',
       crossDomain: true,
       requestOptions: {
         mode: 'cors',
