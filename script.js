@@ -29,7 +29,7 @@ document.getElementById('language-select').addEventListener('change', function()
   i18next.changeLanguage(selectedLanguage, updateContent);
 });
 
-mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+mapboxgl.accessToken = 'pk.eyJ1IjoibWluY2hvbWFjaG8iLCJhIjoiY2x3aDY2eGFpMDYzMzJrbXBzcmpoZnc3MCJ9.V5YaMHi7CRVuB6wOvfZVNA';
 var map = new mapboxgl.Map({
   container: 'map',
   style: 'mapbox://styles/mapbox/streets-v11',
