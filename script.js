@@ -8,7 +8,7 @@ i18next
       loadPath: '/Earthquake-Simulation/locales/{{lng}}/translation.json',
       crossDomain: true,
       requestOptions: {
-        mode: 'cors',
+        mode: 'no-cors',
         credentials: 'same-origin',
         cache: 'default'
       }
